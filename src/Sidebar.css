@@ -1,0 +1,103 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 240px;
+  height: 100vh;
+  background: #29b6f6;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+}
+
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 0 1.5rem 0;
+}
+
+.sidebar-app-title {
+  font-size: 1.7rem;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  letter-spacing: -1px;
+  display: flex;
+  gap: 0.2rem;
+  justify-content: center;
+}
+
+.sidebar-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1.5rem;
+}
+
+.sidebar-link {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 1.05rem;
+  transition: background 0.18s;
+}
+
+.sidebar-link.active,
+.sidebar-link:hover {
+  background: #23a3db;
+}
+
+.sidebar-icon {
+  font-size: 1.3rem;
+}
+
+.sidebar-footer {
+  margin: 2rem 0 1rem 0;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  font-size: 1.05rem;
+  border-radius: 8px;
+  transition: background 0.18s;
+}
+
+.sidebar-footer:hover {
+  background: #23a3db;
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 60px;
+    min-width: 60px;
+  }
+  .sidebar-title,
+  .sidebar-link,
+  .sidebar-footer {
+    font-size: 0;
+  }
+  .sidebar-icon {
+    font-size: 1.6rem;
+  }
+}
