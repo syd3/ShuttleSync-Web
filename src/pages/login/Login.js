@@ -23,21 +23,29 @@ function Login() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    //validate form data
     if (!formData.username || !formData.password) {
       setError('Please fill in all fields');
       return;
     }
 
-    //to be replaced with actual backend authentication.
-    if (formData.username === 'admin' && formData.password === 'admin') {      
-      navigate('/user');
-    } else {
-      setError('Invalid credentials');
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        navigate('/user');
+      } else {
+        setError(data.error || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError('Server error');
     }
   };
 
@@ -50,7 +58,6 @@ function Login() {
         </h1>
         <div className="login-box">
           <h2 className="portal-title">Admin Portal</h2>
-          
           <form onSubmit={handleSubmit}>
             <div className="input-group">
               <span className="input-icon"><UserIcon /></span>
