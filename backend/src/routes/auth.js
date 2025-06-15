@@ -1,9 +1,11 @@
-// for hashing passwords
 const express = require('express');
 const bcrypt = require('bcrypt');
-const db = require('../db'); // your db connection file
+const db = require('../db'); 
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = 'your_secret_key'; 
 
+// for hashing passwords
 router.post('/register', async (req, res) => {
   const { username, password, photo, phone, email } = req.body;
   try {
@@ -21,7 +23,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-
 // Login route
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
@@ -32,8 +33,15 @@ router.post('/login', (req, res) => {
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // You can add JWT or session logic here if needed
-    res.json({ success: true, username: user.username });
+    // Create JWT token
+    const token = jwt.sign(
+      { id: user.id, username: user.username },
+      JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    res.json({ success: true, token, username: user.username });
+    
   });
 });
 

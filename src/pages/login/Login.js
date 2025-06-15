@@ -24,30 +24,32 @@ function Login() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  setError('');
 
-    if (!formData.username || !formData.password) {
-      setError('Please fill in all fields');
-      return;
-    }
+  if (!formData.username || !formData.password) {
+    setError('Please fill in all fields');
+    return;
+  }
 
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        navigate('/user');
-      } else {
-        setError(data.error || 'Invalid credentials');
-      }
-    } catch (err) {
-      setError('Server error');
+  try {
+    const res = await fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      // Store the token
+      localStorage.setItem('token', data.token);
+      navigate('/user');
+    } else {
+      setError(data.error || 'Invalid credentials');
     }
-  };
+  } catch (err) {
+    setError('Server error');
+  }
+};
 
   return (
     <div className="login-bg">
