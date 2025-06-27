@@ -1,33 +1,63 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from '../../Sidebar';
 import './User.css';
-
-// dummy data xd. Will replace to API calls.
-const initialUsers = [
-  { id: 1, name: 'Juan Tamad', userPhoto: 'https://i.imgflip.com/7fx6ag.png', phone: '+123456', email: '123@gmail.com', date: '1/2/2025', type: 'regular' },
-  { id: 2, name: 'Pridyider', userPhoto: 'https://i.imgflip.com/7fx6ag.png', phone: '+123478', email: '4314k@gmail.com', date: '1/2/2025', type: 'regular' },
-  { id: 3, name: 'MAry grace piattos', userPhoto: 'https://i.imgflip.com/7fx6ag.png', phone: '+234234', email: 'iot@rocketmail.com', date: '1/2/2025', type: 'regular' },
-  { id: 4, name: 'Ching chong', userPhoto: 'https://i.imgflip.com/7fx6ag.png', phone: '+8786586', email: 'mi12213@yahoo.com', date: '1/2/2025', type: 'regular' },
-  { id: 5, name: 'Balbas sarado', userPhoto: 'https://i.imgflip.com/7fx6ag.png', phone: '+56785685', email: '8908@gmail.com', date: '1/2/2025', type: 'regular' },
-  { id: 6, name: 'Nujabes', userPhoto: 'https://i.imgflip.com/7fx6ag.png', phone: '+565756567', email: 'Lsd@gmail.com', date: '1/2/2025', type: 'regular' },
-];
-
-const initialDrivers = [
-  { id: 101, name: 'Bong Revilla', userPhoto:'https://i.imgflip.com/9fi9je.png?a485184', phone: '+79000010101', email: 'asdasd@gmail.com', plate: '123133', date: '1/2/2025', vehiclePhoto: 'https://static.wikia.nocookie.net/c88308f3-e20e-41ca-a94a-e715b56e2b6b', type: 'driver' },
-  { id: 102, name: 'Balbas S. Sarado', userPhoto:'https://i.imgflip.com/9fi9je.png?a485184', phone: '+7900001101', email: 'asd2@gmail.com', plate: '123456', date: '1/2/2025', vehiclePhoto: 'https://static.wikia.nocookie.net/c88308f3-e20e-41ca-a94a-e715b56e2b6b', type: 'driver' },
-];
+import {
+  fetchUsers,
+  fetchDrivers,
+  addUser,
+  editUser,
+  deleteUser,
+  addDriver,
+  editDriver,
+  deleteDriver
+} from '../../api/users';
+import { getToken } from '../../api/auth';
+import { useNavigate } from 'react-router-dom';
+import UserModal from './userModal';
+import {
+  handleAddUser,
+  handleEditUser,
+  handleDelete,
+  handleUserPhotoChange,
+  handleVehiclePhotoChange
+} from './userUtils';
 
 function User() {
-  const [users, setUsers] = useState(initialUsers);
-  const [drivers, setDrivers] = useState(initialDrivers);
+  const [users, setUsers] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addType, setAddType] = useState('regular');
   const [showMenu, setShowMenu] = useState({ id: null, type: null });
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const menuRef = useRef(null);
+  const navigate = useNavigate();
+  const [userPhotoPreview, setUserPhotoPreview] = useState('');
+  const [vehiclePhotoPreview, setVehiclePhotoPreview] = useState('');
+  const [newUser, setNewUser] = useState({
+    username: '',
+    given_name: '',
+    middle_initial: '',
+    last_name: '',
+    phone: '',
+    email: '',
+    plate: '',
+    vehiclePhoto: '',
+    userPhoto: '',
+    type: 'regular',
+  });
 
-  //action menu disable if clicked outside
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    fetchUsers().then(setUsers).catch(() => setUsers([]));
+    fetchDrivers().then(setDrivers).catch(() => setDrivers([]));
+  }, [navigate]);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (
@@ -46,70 +76,71 @@ function User() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showMenu]);
-  //user state
-  const [newUser, setNewUser] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    plate: '',
-    vehiclePhoto: '',
-    userPhoto: '',
-    type: 'regular',
-  });
 
-  //add user
-  const handleAddUser = () => {
-    if (addType === 'regular') {
-      setUsers([
-        ...users,
-        {
-          id: Date.now(),
-          name: newUser.name,
-          phone: newUser.phone,
-          email: newUser.email,
-          userPhoto: newUser.userPhoto,
-          date: new Date().toLocaleDateString(),
-          type: 'regular',
-        },
-      ]);
-    } else {
-      setDrivers([
-        ...drivers,
-        {
-          id: Date.now(),
-          name: newUser.name,
-          phone: newUser.phone,
-          email: newUser.email,
-          plate: newUser.plate,
-          vehiclePhoto: newUser.vehiclePhoto,
-          userPhoto: newUser.userPhoto,
-          date: new Date().toLocaleDateString(),
-          type: 'driver',
-        },
-      ]);
-    }
-    setShowAddModal(false);
-    setNewUser({ name: '', phone: '', email: '', plate: '', vehiclePhoto: '', userPhoto: '', type: 'regular' });
-    setAddType('regular');
+  // Helper to reset newUser and previews
+  const resetNewUser = () => {
+    setNewUser({
+      username: '',
+      given_name: '',
+      middle_initial: '',
+      last_name: '',
+      phone: '',
+      email: '',
+      plate: '',
+      vehiclePhoto: '',
+      userPhoto: '',
+      type: 'regular',
+    });
+    setUserPhotoPreview('');
+    setVehiclePhotoPreview('');
+    setErrorMsg('');
   };
 
-  //edit user
-  const handleEditUser = () => {
-    if (editData.type === 'regular') {
-      setUsers(users.map(u => u.id === editData.id ? editData : u));
-    } else {
-      setDrivers(drivers.map(d => d.id === editData.id ? editData : d));
-    }
+  // Modal close handler
+  const closeModals = () => {
+    setShowAddModal(false);
     setShowEditModal(false);
     setEditData(null);
+    resetNewUser();
   };
 
-  //delete . In action-menu modal
-  const handleDelete = (id, type) => {
-    if (type === 'regular') setUsers(users.filter(u => u.id !== id));
-    else setDrivers(drivers.filter(d => d.id !== id));
-    setShowMenu({ id: null, type: null });
+  // Validation for Add/Edit
+  const validateUser = (user, isDriver = false) => {
+    if (!user.username || !user.given_name || !user.last_name || !user.email) {
+      return 'Username, Given Name, Last Name, and Email are required.';
+    }
+    if (!/^\S+@\S+\.\S+$/.test(user.email)) {
+      return 'Invalid email format.';
+    }
+    if (isDriver && !user.plate) {
+      return 'Plate Number is required for drivers.';
+    }
+    return '';
   };
+
+  // Handler wrappers for modular utils with validation
+  const onAddUser = () => {
+    const isDriver = addType === 'driver';
+    const err = validateUser(newUser, isDriver);
+    if (err) { setErrorMsg(err); return; }
+    handleAddUser({
+      addType, newUser, setErrorMsg, setUsers, setDrivers, setShowAddModal, setNewUser, setAddType, addUser, addDriver, fetchUsers, fetchDrivers
+    });
+    resetNewUser();
+  };
+  const onEditUser = () => {
+    const isDriver = editData?.type === 'driver';
+    const err = validateUser(editData, isDriver);
+    if (err) { setErrorMsg(err); return; }
+    handleEditUser({
+      editData, setErrorMsg, setUsers, setDrivers, setShowEditModal, setEditData, editUser, editDriver, fetchUsers, fetchDrivers
+    });
+  };
+  const onDelete = (id, type) => handleDelete({
+    id, type, setErrorMsg, setUsers, setDrivers, setShowMenu, deleteUser, deleteDriver, fetchUsers, fetchDrivers
+  });
+  const onUserPhotoChange = (e, isEdit = false) => handleUserPhotoChange(e, isEdit, editData, setEditData, newUser, setNewUser, setUserPhotoPreview);
+  const onVehiclePhotoChange = (e, isEdit = false) => handleVehiclePhotoChange(e, isEdit, editData, setEditData, newUser, setNewUser, setVehiclePhotoPreview);
 
   return (
     <>
@@ -119,7 +150,7 @@ function User() {
         <section className="user-section">
           <div className="user-table-header">
             <h2>User Table</h2>
-            <button className="add-user-btn" onClick={() => { setShowAddModal(true); setAddType('regular'); }}>
+            <button className="add-user-btn" onClick={() => { resetNewUser(); setShowAddModal(true); setAddType('regular'); }}>
               <span className="add-icon">+</span> Add User
             </button>
           </div>
@@ -128,7 +159,8 @@ function User() {
               <thead>
                 <tr>
                   <th>User Photo</th>
-                  <th>User</th>
+                  <th>Username</th>
+                  <th>Full Name</th>
                   <th>Phone number</th>
                   <th>Email</th>
                   <th>Date Created</th>
@@ -138,8 +170,9 @@ function User() {
               <tbody>
                 {users.map(u => (
                   <tr key={u.id}>
-                    <td><img src={u.userPhoto} alt="user" className="user-photo" /></td>
+                    <td>{u.userPhoto ? <img src={u.userPhoto} alt="user" className="user-photo" /> : null}</td>
                     <td>{u.name}</td>
+                    <td>{[u.given_name, u.middle_initial, u.last_name].filter(Boolean).join(' ')}</td>
                     <td>{u.phone}</td>
                     <td>{u.email}</td>
                     <td>{u.date}</td>
@@ -150,8 +183,8 @@ function User() {
                       >&#8942;</button>
                       {showMenu.id === u.id && showMenu.type === 'regular' && (
                         <div className="action-menu" ref={menuRef}>
-                          <button onClick={() => { setEditData(u); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
-                          <button className="delete-btn" onClick={() => handleDelete(u.id, 'regular')}>Delete</button>
+                          <button onClick={() => { setEditData({ ...u, username: u.name, type: 'regular' }); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
+                          <button className="delete-btn" onClick={() => onDelete(u.id, 'regular')}>Delete</button>
                         </div>
                       )}
                     </td>
@@ -166,7 +199,7 @@ function User() {
         <section className="user-section">
           <div className="user-table-header">
             <h2>User(driver) Table</h2>
-            <button className="add-user-btn" onClick={() => { setShowAddModal(true); setAddType('driver'); }}>
+            <button className="add-user-btn" onClick={() => { resetNewUser(); setShowAddModal(true); setAddType('driver'); }}>
               <span className="add-icon">+</span> Add User
             </button>
           </div>
@@ -175,7 +208,8 @@ function User() {
               <thead>
                 <tr>
                   <th>User Photo</th>
-                  <th>User</th>
+                  <th>Username</th>
+                  <th>Full Name</th>
                   <th>Phone Number</th>
                   <th>Email</th>
                   <th>Plate Number</th>
@@ -187,14 +221,15 @@ function User() {
               <tbody>
                 {drivers.map(d => (
                   <tr key={d.id}>
-                    <td><img src={d.userPhoto} alt="user" className="user-photo" /></td>
+                    <td>{d.userPhoto ? <img src={d.userPhoto} alt="user" className="user-photo" /> : null}</td>
                     <td>{d.name}</td>
+                    <td>{[d.given_name, d.middle_initial, d.last_name].filter(Boolean).join(' ')}</td>
                     <td>{d.phone}</td>
                     <td>{d.email}</td>
                     <td>{d.plate}</td>
                     <td>{d.date}</td>
                     <td>
-                      <img src={d.vehiclePhoto} alt="vehicle" className="vehicle-photo" />
+                      {d.vehiclePhoto ? <img src={d.vehiclePhoto} alt="vehicle" className="vehicle-photo" /> : null}
                     </td>
                     <td className="actions-cell">
                       <button
@@ -203,8 +238,8 @@ function User() {
                       >&#8942;</button>
                       {showMenu.id === d.id && showMenu.type === 'driver' && (
                         <div className="action-menu" ref={menuRef}>
-                          <button onClick={() => { setEditData(d); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
-                          <button className="delete-btn" onClick={() => handleDelete(d.id, 'driver')}>Delete</button>
+                          <button onClick={() => { setEditData({ ...d, username: d.name, type: 'driver' }); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
+                          <button className="delete-btn" onClick={() => onDelete(d.id, 'driver')}>Delete</button>
                         </div>
                       )}
                     </td>
@@ -217,77 +252,25 @@ function User() {
 
         {/* Add/Edit Modal */}
         {(showAddModal || showEditModal) && (
-          <div className="modal-overlay" onClick={() => { setShowAddModal(false); setShowEditModal(false); setEditData(null); }}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
-              <h2>{showAddModal ? `Add ${addType === 'regular' ? 'User' : 'Driver'}` : `Edit ${editData?.type === 'regular' ? 'User' : 'Driver'}`}</h2>
-              <label>URL muna</label>
-              <input
-                type="text"
-                placeholder="User Photo URL"
-                value={showAddModal ? newUser.userPhoto : editData?.userPhoto || ''}
-                onChange={e => showAddModal
-                  ? setNewUser({ ...newUser, userPhoto: e.target.value })
-                  : setEditData({ ...editData, userPhoto: e.target.value })}
-              />
-              <label>Name</label>
-              <input
-                type="text"
-                placeholder="Name"
-                value={showAddModal ? newUser.name : editData?.name || ''}
-                onChange={e => showAddModal
-                  ? setNewUser({ ...newUser, name: e.target.value })
-                  : setEditData({ ...editData, name: e.target.value })}
-              />
-              <label>Phone Number</label>
-              <input
-                type="text"
-                placeholder="Phone Number"
-                value={showAddModal ? newUser.phone : editData?.phone || ''}
-                onChange={e => showAddModal
-                  ? setNewUser({ ...newUser, phone: e.target.value })
-                  : setEditData({ ...editData, phone: e.target.value })}
-              />
-              <label>Email</label>
-              <input
-                type="email"
-                placeholder="Email"
-                value={showAddModal ? newUser.email : editData?.email || ''}
-                onChange={e => showAddModal
-                  ? setNewUser({ ...newUser, email: e.target.value })
-                  : setEditData({ ...editData, email: e.target.value })}
-              />
-              {(showAddModal ? addType : editData?.type) === 'driver' && (
-                <>
-                  <label>Plate Number</label>
-                  <input
-                    type="text"
-                    placeholder="Plate Number"
-                    value={showAddModal ? newUser.plate : editData?.plate || ''}
-                    onChange={e => showAddModal
-                      ? setNewUser({ ...newUser, plate: e.target.value })
-                      : setEditData({ ...editData, plate: e.target.value })}
-                  />
-                  <label>URL muna</label>
-                  <input
-                    type="text"
-                    placeholder="Vehicle Photo URL"
-                    value={showAddModal ? newUser.vehiclePhoto : editData?.vehiclePhoto || ''}
-                    onChange={e => showAddModal
-                      ? setNewUser({ ...newUser, vehiclePhoto: e.target.value })
-                      : setEditData({ ...editData, vehiclePhoto: e.target.value })}
-                  />
-                </>
-              )}
-              <div className="modal-actions">
-                <button onClick={showAddModal ? handleAddUser : handleEditUser}>
-                  {showAddModal ? 'Add' : 'Save'}
-                </button>
-                <button onClick={() => { setShowAddModal(false); setShowEditModal(false); setEditData(null); }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+          <UserModal
+            showAddModal={showAddModal}
+            showEditModal={showEditModal}
+            addType={addType}
+            editData={editData}
+            newUser={newUser}
+            setNewUser={setNewUser}
+            setEditData={setEditData}
+            errorMsg={errorMsg}
+            handleAddUser={onAddUser}
+            handleEditUser={onEditUser}
+            setShowAddModal={setShowAddModal}
+            setShowEditModal={setShowEditModal}
+            userPhotoPreview={userPhotoPreview}
+            vehiclePhotoPreview={vehiclePhotoPreview}
+            handleUserPhotoChange={onUserPhotoChange}
+            handleVehiclePhotoChange={onVehiclePhotoChange}
+            closeModals={closeModals}
+          />
         )}
       </div>
     </>

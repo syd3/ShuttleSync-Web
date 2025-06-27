@@ -40,7 +40,7 @@ function Review() {
   //placeholder for export to PDF
   const handleExportPDF = () => {
     //export ot pdf functionality
-    alert('im so dead..');
+    alert('wala pa');
   };
 
   //for truncate comment ...
