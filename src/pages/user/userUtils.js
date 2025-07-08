@@ -12,14 +12,11 @@ const cleanUser = (user) => {
     last_name: user.last_name || '',
     phone: user.phone || '',
     email: user.email || '',
-    user_photo: typeof user.userPhoto === 'string' ? user.userPhoto : (user.userPhoto ? String(user.userPhoto) : ''),
+    user_photo: user.user_photo || '', // Keep this as-is and don't delete
   };
-  // Remove undefined fields if any
   Object.keys(cleaned).forEach(key => {
     if (typeof cleaned[key] === 'undefined') delete cleaned[key];
   });
-  // Remove userPhoto if present
-  if ('userPhoto' in cleaned) delete cleaned.userPhoto;
   return cleaned;
 };
 
