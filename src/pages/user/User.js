@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from '../../Sidebar';
 import './User.css';
@@ -21,6 +22,29 @@ import {
   handleUserPhotoChange,
   handleVehiclePhotoChange
 } from './userUtils';
+
+// Helper to format Firestore Timestamp or string/Date
+function formatDate(dateValue) {
+  if (!dateValue) return '';
+  // for logging purposes
+  // console.log('formatDate input:', dateValue);
+  // Firestore Timestamp object (from SDK)
+  if (dateValue && typeof dateValue.toDate === 'function') {
+    return dateValue.toDate().toLocaleString();
+  }
+  // Firestore Timestamp as plain object { seconds, nanoseconds } or { _seconds, _nanoseconds }
+  if (typeof dateValue === 'object' && dateValue !== null) {
+    if (typeof dateValue.seconds === 'number') {
+      return new Date(dateValue.seconds * 1000).toLocaleString();
+    }
+    if (typeof dateValue._seconds === 'number') {
+      return new Date(dateValue._seconds * 1000).toLocaleString();
+    }
+  }
+  // ISO string or Date object
+  const d = new Date(dateValue);
+  return isNaN(d.getTime()) ? '' : d.toLocaleString();
+}
 
 function User() {
   const [users, setUsers] = useState([]);
@@ -54,8 +78,21 @@ function User() {
       navigate('/login');
       return;
     }
-    fetchUsers().then(setUsers).catch(() => setUsers([]));
-    fetchDrivers().then(setDrivers).catch(() => setDrivers([]));
+    fetchUsers()
+      .then(data => setUsers(data.map(u => ({
+        ...u,
+        userPhoto: u.user_photo || '',
+        date_created: u.date_created || u.created_at || '',
+      }))))
+      .catch(() => setUsers([]));
+    fetchDrivers()
+      .then(data => setDrivers(data.map(d => ({
+        ...d,
+        userPhoto: d.user_photo || '',
+        vehiclePhoto: d.vehiclePhoto || '',
+        date_created: d.date_created || d.created_at || '',
+      }))))
+      .catch(() => setDrivers([]));
   }, [navigate]);
 
   useEffect(() => {
@@ -171,11 +208,11 @@ function User() {
                 {users.map(u => (
                   <tr key={u.id}>
                     <td>{u.userPhoto ? <img src={u.userPhoto} alt="user" className="user-photo" /> : null}</td>
-                    <td>{u.name}</td>
+                    <td>{u.username}</td>
                     <td>{[u.given_name, u.middle_initial, u.last_name].filter(Boolean).join(' ')}</td>
                     <td>{u.phone}</td>
                     <td>{u.email}</td>
-                    <td>{u.date}</td>
+                    <td>{formatDate(u.date_created)}</td>
                     <td className="actions-cell">
                       <button
                         className="dots-btn"
@@ -183,7 +220,7 @@ function User() {
                       >&#8942;</button>
                       {showMenu.id === u.id && showMenu.type === 'regular' && (
                         <div className="action-menu" ref={menuRef}>
-                          <button onClick={() => { setEditData({ ...u, username: u.name, type: 'regular' }); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
+                          <button onClick={() => { setEditData({ ...u, username: u.username, type: 'regular' }); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
                           <button className="delete-btn" onClick={() => onDelete(u.id, 'regular')}>Delete</button>
                         </div>
                       )}
@@ -222,12 +259,13 @@ function User() {
                 {drivers.map(d => (
                   <tr key={d.id}>
                     <td>{d.userPhoto ? <img src={d.userPhoto} alt="user" className="user-photo" /> : null}</td>
-                    <td>{d.name}</td>
+                    <td>{d.username}</td>
                     <td>{[d.given_name, d.middle_initial, d.last_name].filter(Boolean).join(' ')}</td>
                     <td>{d.phone}</td>
                     <td>{d.email}</td>
                     <td>{d.plate}</td>
-                    <td>{d.date}</td>
+                    <td>{formatDate(d.date_created)}</td>
+
                     <td>
                       {d.vehiclePhoto ? <img src={d.vehiclePhoto} alt="vehicle" className="vehicle-photo" /> : null}
                     </td>
@@ -238,7 +276,7 @@ function User() {
                       >&#8942;</button>
                       {showMenu.id === d.id && showMenu.type === 'driver' && (
                         <div className="action-menu" ref={menuRef}>
-                          <button onClick={() => { setEditData({ ...d, username: d.name, type: 'driver' }); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
+                          <button onClick={() => { setEditData({ ...d, username: d.username, type: 'driver' }); setShowEditModal(true); setShowMenu({ id: null, type: null }); }}>Edit</button>
                           <button className="delete-btn" onClick={() => onDelete(d.id, 'driver')}>Delete</button>
                         </div>
                       )}

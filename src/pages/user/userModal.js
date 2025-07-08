@@ -31,7 +31,7 @@ const UserModal = ({
             <img
               src={
                 showAddModal
-                  ? userPhotoPreview || 'https://via.placeholder.com/120?text=User+Photo'
+                  ? (userPhotoPreview || (typeof newUser.userPhoto === 'string' && newUser.userPhoto) || 'https://via.placeholder.com/120?text=User+Photo')
                   : userPhotoPreview || (editData?.userPhoto && typeof editData.userPhoto === 'string' ? editData.userPhoto : (editData?.userPhoto && editData.userPhoto.name ? URL.createObjectURL(editData.userPhoto) : 'https://via.placeholder.com/120?text=User+Photo'))
               }
               alt="User"
@@ -53,7 +53,7 @@ const UserModal = ({
               <img
                 src={
                   showAddModal
-                    ? vehiclePhotoPreview || 'https://via.placeholder.com/120x80?text=Vehicle+Photo'
+                    ? (vehiclePhotoPreview || (typeof newUser.vehiclePhoto === 'string' && newUser.vehiclePhoto) || 'https://via.placeholder.com/120x80?text=Vehicle+Photo')
                     : vehiclePhotoPreview || (editData?.vehiclePhoto && typeof editData.vehiclePhoto === 'string' ? editData.vehiclePhoto : (editData?.vehiclePhoto && editData.vehiclePhoto.name ? URL.createObjectURL(editData.vehiclePhoto) : 'https://via.placeholder.com/120x80?text=Vehicle+Photo'))
                 }
                 alt="Vehicle"

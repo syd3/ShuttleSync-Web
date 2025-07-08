@@ -1,34 +1,65 @@
+// Receives state and setState functions as needed
+
 // Utility functions for User page
 // Receives state and setState functions as needed
+import { uploadToCloudinary } from '../../api/cloudinary';
+// fix undefined fields in user object
+const cleanUser = (user) => {
+  const cleaned = {
+    username: user.username || '',
+    given_name: user.given_name || '',
+    middle_initial: user.middle_initial || '',
+    last_name: user.last_name || '',
+    phone: user.phone || '',
+    email: user.email || '',
+    user_photo: typeof user.userPhoto === 'string' ? user.userPhoto : (user.userPhoto ? String(user.userPhoto) : ''),
+  };
+  // Remove undefined fields if any
+  Object.keys(cleaned).forEach(key => {
+    if (typeof cleaned[key] === 'undefined') delete cleaned[key];
+  });
+  // Remove userPhoto if present
+  if ('userPhoto' in cleaned) delete cleaned.userPhoto;
+  return cleaned;
+};
+
+// fix undefined fields in driver object
+const cleanDriver = (driver) => {
+  const cleaned = {
+    username: driver.username || '',
+    given_name: driver.given_name || '',
+    middle_initial: driver.middle_initial || '',
+    last_name: driver.last_name || '',
+    phone: driver.phone || '',
+    email: driver.email || '',
+    plate: driver.plate || '',
+    user_photo: typeof driver.userPhoto === 'string' ? driver.userPhoto : (driver.userPhoto ? String(driver.userPhoto) : ''),
+    vehiclePhoto: typeof driver.vehiclePhoto === 'string' ? driver.vehiclePhoto : (driver.vehiclePhoto ? String(driver.vehiclePhoto) : ''),
+  };
+  Object.keys(cleaned).forEach(key => {
+    if (typeof cleaned[key] === 'undefined') delete cleaned[key];
+  });
+  return cleaned;
+};
 
 export const handleAddUser = async ({
   addType, newUser, setErrorMsg, setUsers, setDrivers, setShowAddModal, setNewUser, setAddType, addUser, addDriver, fetchUsers, fetchDrivers
 }) => {
   setErrorMsg('');
   try {
+    let userToSend = { ...newUser };
+    // Handle userPhoto upload if it's a File
+    if (userToSend.userPhoto instanceof File) {
+      userToSend.user_photo = await uploadToCloudinary(userToSend.userPhoto);
+    } else if (typeof userToSend.userPhoto === 'string') {
+      userToSend.user_photo = userToSend.userPhoto;
+    }
+    delete userToSend.userPhoto;
     if (addType === 'regular') {
-      await addUser({
-        username: newUser.username,
-        given_name: newUser.given_name,
-        middle_initial: newUser.middle_initial,
-        last_name: newUser.last_name,
-        phone: newUser.phone,
-        email: newUser.email,
-        userPhoto: typeof newUser.userPhoto === 'string' ? newUser.userPhoto : '',
-      });
+      await addUser(cleanUser(userToSend));
       setUsers(await fetchUsers());
     } else {
-      await addDriver({
-        username: newUser.username,
-        given_name: newUser.given_name,
-        middle_initial: newUser.middle_initial,
-        last_name: newUser.last_name,
-        phone: newUser.phone,
-        email: newUser.email,
-        plate: newUser.plate,
-        userPhoto: typeof newUser.userPhoto === 'string' ? newUser.userPhoto : '',
-        vehiclePhoto: typeof newUser.vehiclePhoto === 'string' ? newUser.vehiclePhoto : '',
-      });
+      await addDriver(cleanDriver(userToSend));
       setDrivers(await fetchDrivers());
     }
     setShowAddModal(false);
@@ -44,29 +75,19 @@ export const handleEditUser = async ({
 }) => {
   setErrorMsg('');
   try {
-    if (editData.type === 'regular') {
-      await editUser(editData.id, {
-        username: editData.username,
-        given_name: editData.given_name,
-        middle_initial: editData.middle_initial,
-        last_name: editData.last_name,
-        phone: editData.phone,
-        email: editData.email,
-        userPhoto: typeof editData.userPhoto === 'string' ? editData.userPhoto : '',
-      });
+    let userToSend = { ...editData };
+    // Handle userPhoto upload if it's a File
+    if (userToSend.userPhoto instanceof File) {
+      userToSend.user_photo = await uploadToCloudinary(userToSend.userPhoto);
+    } else if (typeof userToSend.userPhoto === 'string') {
+      userToSend.user_photo = userToSend.userPhoto;
+    }
+    delete userToSend.userPhoto;
+    if (userToSend.type === 'regular') {
+      await editUser(userToSend.id, cleanUser(userToSend));
       setUsers(await fetchUsers());
     } else {
-      await editDriver(editData.id, {
-        username: editData.username,
-        given_name: editData.given_name,
-        middle_initial: editData.middle_initial,
-        last_name: editData.last_name,
-        phone: editData.phone,
-        email: editData.email,
-        plate: editData.plate,
-        userPhoto: typeof editData.userPhoto === 'string' ? editData.userPhoto : '',
-        vehiclePhoto: typeof editData.vehiclePhoto === 'string' ? editData.vehiclePhoto : '',
-      });
+      await editDriver(userToSend.id, cleanDriver(userToSend));
       setDrivers(await fetchDrivers());
     }
     setShowEditModal(false);

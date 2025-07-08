@@ -1,9 +1,9 @@
 const express = require('express');
-const db = require('../db');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
+const db = require('../firebase'); 
 
-const JWT_SECRET = 'your_secret_key'; // Use env var in production
+const JWT_SECRET = 'your_secret_key'; 
 
 // Middleware to verify JWT
 function authenticateToken(req, res, next) {
@@ -23,11 +23,64 @@ function isValidEmail(email) {
 }
 
 // Get all regular users
-router.get('/users', authenticateToken, (req, res) => {
-  db.all('SELECT id, photo as userPhoto, username as name, given_name, middle_initial, last_name, phone, email, date_created as date FROM users', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+router.get('/users', authenticateToken, async (req, res) => {
+  try {
+    const usersSnapshot = await db.collection('users').get();
+    const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a regular user
+router.post('/users', authenticateToken, async (req, res) => {
+  const { username, given_name, middle_initial, last_name, phone, email, user_photo } = req.body;
+  if (!username || !given_name || !last_name || !email) {
+    return res.status(400).json({ error: 'Username, given name, last name, and email are required.' });
+  }
+  if (!isValidEmail(email)) return res.status(400).json({ error: 'Invalid email format.' });
+  try {
+    const docRef = await db.collection('users').add({
+      username,
+      given_name,
+      middle_initial: middle_initial || '',
+      last_name,
+      phone,
+      email,
+      user_photo: typeof user_photo === 'string' ? user_photo : '',
+      date_created: new Date().toISOString()
+    });
+    res.json({ id: docRef.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit a regular user
+router.put('/users/:id', authenticateToken, async (req, res) => {
+  let { username, given_name, middle_initial, last_name, phone, email, user_photo } = req.body;
+  try {
+    const updateData = { username, given_name, middle_initial, last_name, phone, email, user_photo };
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) delete updateData[key];
+    });
+    if (updateData.middle_initial === undefined) updateData.middle_initial = '';
+    await db.collection('users').doc(req.params.id).update(updateData);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a regular user
+router.delete('/users/:id', authenticateToken, async (req, res) => {
+  try {
+    await db.collection('users').doc(req.params.id).delete();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get all drivers
@@ -35,48 +88,6 @@ router.get('/drivers', authenticateToken, (req, res) => {
   db.all('SELECT id, photo as userPhoto, username as name, given_name, middle_initial, last_name, phone, email, platenumber as plate, date_created as date, vehicle_photo as vehiclePhoto FROM drivers', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
-  });
-});
-
-// Add a regular user
-router.post('/users', authenticateToken, (req, res) => {
-  const { username, given_name, middle_initial, last_name, phone, email, userPhoto } = req.body;
-  if (!username || !given_name || !last_name || !email) {
-    return res.status(400).json({ error: 'Username, given name, last name, and email are required.' });
-  }
-  if (!isValidEmail(email)) return res.status(400).json({ error: 'Invalid email format.' });
-  db.run(
-    'INSERT INTO users (username, given_name, middle_initial, last_name, phone, email, photo, date_created, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, datetime("now"), "")',
-    [username, given_name, middle_initial || '', last_name, phone, email, userPhoto],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
-    }
-  );
-});
-
-// Edit a regular user
-router.put('/users/:id', authenticateToken, (req, res) => {
-  const { username, given_name, middle_initial, last_name, phone, email, userPhoto } = req.body;
-  if (!username || !given_name || !last_name || !email) {
-    return res.status(400).json({ error: 'Username, given name, last name, and email are required.' });
-  }
-  if (!isValidEmail(email)) return res.status(400).json({ error: 'Invalid email format.' });
-  db.run(
-    'UPDATE users SET username = ?, given_name = ?, middle_initial = ?, last_name = ?, phone = ?, email = ?, photo = ? WHERE id = ?',
-    [username, given_name, middle_initial || '', last_name, phone, email, userPhoto, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true });
-    }
-  );
-});
-
-// Delete a regular user
-router.delete('/users/:id', authenticateToken, (req, res) => {
-  db.run('DELETE FROM users WHERE id = ?', [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true });
   });
 });
 
@@ -98,20 +109,19 @@ router.post('/drivers', authenticateToken, (req, res) => {
 });
 
 // Edit a driver
-router.put('/drivers/:id', authenticateToken, (req, res) => {
-  const { username, given_name, middle_initial, last_name, phone, email, plate, userPhoto, vehiclePhoto } = req.body;
-  if (!username || !given_name || !last_name || !email) {
-    return res.status(400).json({ error: 'Username, given name, last name, and email are required.' });
+router.put('/drivers/:id', authenticateToken, async (req, res) => {
+  let { username, given_name, middle_initial, last_name, phone, email, plate, userPhoto, vehiclePhoto } = req.body;
+  try {
+    const updateData = { username, given_name, middle_initial, last_name, phone, email, plate, userPhoto, vehiclePhoto };
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) delete updateData[key];
+    });
+    if (updateData.middle_initial === undefined) updateData.middle_initial = '';
+    await db.collection('drivers').doc(req.params.id).update(updateData);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  if (!isValidEmail(email)) return res.status(400).json({ error: 'Invalid email format.' });
-  db.run(
-    'UPDATE drivers SET username = ?, given_name = ?, middle_initial = ?, last_name = ?, phone = ?, email = ?, platenumber = ?, photo = ?, vehicle_photo = ? WHERE id = ?',
-    [username, given_name, middle_initial || '', last_name, phone, email, plate, userPhoto, vehiclePhoto, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true });
-    }
-  );
 });
 
 // Delete a driver
